@@ -1,0 +1,9 @@
+.git
+.agents
+.aws
+.codex
+.idea
+.vscode
+.env
+**/target
+prompt-log.md

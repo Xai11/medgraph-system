@@ -1,0 +1,85 @@
+name: medgraph-dev
+
+services:
+  fact-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: facts
+      POSTGRES_USER: fact
+      POSTGRES_PASSWORD: fact_local
+    ports:
+      - "127.0.0.1:15433:5432"
+    volumes:
+      - fact-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  graph-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: graphs
+      POSTGRES_USER: graph
+      POSTGRES_PASSWORD: graph_local
+    ports:
+      - "127.0.0.1:15434:5432"
+    volumes:
+      - graph-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  fact-service:
+    build:
+      context: .
+      args:
+        SERVICE: fact-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://fact-db:5432/facts
+      MEDGRAPH_GRAPH_BASE_URL: http://graph-service:8082
+      MEDGRAPH_GENERATOR_ENABLED: ${MEDGRAPH_GENERATOR_ENABLED:-true}
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      fact-db:
+        condition: service_healthy
+
+  graph-service:
+    build:
+      context: .
+      args:
+        SERVICE: graph-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://graph-db:5432/graphs
+      MEDGRAPH_FACT_BASE_URL: http://fact-service:8081
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      graph-db:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4:9.19
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@medgraph.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-medgraph_admin_local}
+      PGADMIN_DISABLE_POSTFIX: "true"
+    ports:
+      - "127.0.0.1:15051:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      fact-db:
+        condition: service_healthy
+      graph-db:
+        condition: service_healthy
+
+volumes:
+  fact-data:
+  graph-data:
+  pgadmin-data:

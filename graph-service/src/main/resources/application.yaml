@@ -1,0 +1,18 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: graph-service
+  datasource:
+    url: jdbc:postgresql://localhost:15434/graphs
+    username: graph
+    password: graph_local
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+medgraph:
+  fact:
+    base-url: ${MEDGRAPH_FACT_BASE_URL:http://localhost:8081}
